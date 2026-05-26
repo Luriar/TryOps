@@ -1,0 +1,10 @@
+project_id = "tryops-dev-12345"
+region     = "asia-northeast3"
+environment = "dev"
+terraform_service_account = "tryops-terraform@tryops-dev-12345.iam.gserviceaccount.com"
+
+common_labels = {
+  project    = "tryops"
+  environment = "dev"
+  managed_by  = "terraform"
+}

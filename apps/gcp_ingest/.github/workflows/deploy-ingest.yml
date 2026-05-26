@@ -1,0 +1,48 @@
+name: Deploy GCP Ingest Service
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'apps/gcp_ingest/**'
+
+jobs:
+  deploy:
+    name: Deploy to Cloud Run
+    runs-on: ubuntu-latest
+    permissions:
+      contents: 'read'
+      id-token: 'write'
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Google Auth
+        id: auth
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: '${{ secrets.WIF_PROVIDER }}'
+          service_account: '${{ secrets.GCP_SA_EMAIL }}'
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Authorize Docker push
+        run: gcloud auth configure-docker asia-northeast3-docker.pkg.dev
+
+      - name: Build and Push Docker image
+        run: |
+          cd apps/gcp_ingest
+          IMAGE_NAME="asia-northeast3-docker.pkg.dev/${{ env.PROJECT_ID }}/tryops-repo/ingest-service:${{ github.sha }}"
+          docker build -t $IMAGE_NAME .
+          docker push $IMAGE_NAME
+          
+          # Deploy to Cloud Run
+          gcloud run deploy tryops-ingest \
+            --image $IMAGE_NAME \
+            --region asia-northeast3 \
+            --platform managed \
+            --allow-unauthenticated=false \
+            --service-account ingest-sa@${{ env.PROJECT_ID }}.iam.gserviceaccount.com

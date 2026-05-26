@@ -1,0 +1,16 @@
+# Production Environment Variables
+# 실제 운영 시 이 파일을 채우거나 환경변수로 전달
+
+project_id                = "tryops-production"
+region                    = "asia-northeast3"
+zone                      = "asia-northeast3-a"
+billing_account_id        = "XXXXXX-XXXXXX-XXXXXX"  # GCP Console에서 확인
+alert_email               = "alerts@tryops.io"
+monthly_budget_usd        = 100  # PoC 단계는 100, 매장 100개+ 시 상향
+terraform_service_account = "terraform-deploy@tryops-production.iam.gserviceaccount.com"
+
+brand_ids = [
+  "brand-001",
+  "brand-002",
+  # 신규 본사 계약 시 추가
+]

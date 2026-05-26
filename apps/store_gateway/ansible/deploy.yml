@@ -1,0 +1,55 @@
+---
+- name: Deploy TryOps Store Gateway to Raspberry Pi
+  hosts: store_gateways
+  become: yes
+  
+  vars:
+    app_dir: "/opt/tryops-store-gateway"
+    data_dir: "/var/lib/tryops/data"
+    keys_dir: "/etc/tryops/keys"
+    env_file: "/etc/tryops/gateway.env"
+
+  tasks:
+    - name: Ensure directories exist
+      file:
+        path: "{{ item }}"
+        state: directory
+        mode: '0755'
+      with_items:
+        - "{{ app_dir }}"
+        - "{{ data_dir }}"
+        - "{{ keys_dir }}"
+
+    - name: Copy environment file (Template)
+      template:
+        src: templates/gateway.env.j2
+        dest: "{{ env_file }}"
+        mode: '0600'
+      # Note: The actual SQLCIPHER_KEY and GCP_SA_KEY should be vaulted
+
+    - name: Copy application source
+      synchronize:
+        src: ../
+        dest: "{{ app_dir }}/"
+        rsync_opts:
+          - "--exclude=venv"
+          - "--exclude=.git"
+          - "--exclude=__pycache__"
+
+    - name: Build Docker image locally on the Pi
+      command: docker build -t tryops-store-gateway:latest .
+      args:
+        chdir: "{{ app_dir }}"
+
+    - name: Copy systemd service file
+      copy:
+        src: ../systemd/tryops-gateway.service
+        dest: /etc/systemd/system/tryops-gateway.service
+        mode: '0644'
+
+    - name: Start and enable the service
+      systemd:
+        name: tryops-gateway.service
+        state: restarted
+        enabled: yes
+        daemon_reload: yes

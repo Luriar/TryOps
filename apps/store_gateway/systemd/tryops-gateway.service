@@ -1,0 +1,21 @@
+[Unit]
+Description=TryOps Store Gateway Container
+After=docker.service
+Requires=docker.service
+
+[Service]
+Restart=always
+RestartSec=10
+TimeoutStartSec=0
+ExecStartPre=-/usr/bin/docker stop tryops-store-gateway
+ExecStartPre=-/usr/bin/docker rm tryops-store-gateway
+ExecStart=/usr/bin/docker run --name tryops-store-gateway \
+    --network host \
+    --env-file /etc/tryops/gateway.env \
+    -v /var/lib/tryops/data:/app/data \
+    -v /etc/tryops/keys:/app/keys:ro \
+    tryops-store-gateway:latest
+ExecStop=/usr/bin/docker stop tryops-store-gateway
+
+[Install]
+WantedBy=multi-user.target

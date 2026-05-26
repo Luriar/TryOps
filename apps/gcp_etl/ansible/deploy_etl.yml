@@ -1,0 +1,78 @@
+---
+- name: Deploy GCP ETL Pipeline
+  hosts: etl_servers
+  become: yes
+  vars:
+    app_dir: "/opt/tryops/gcp_etl"
+    venv_dir: "{{ app_dir }}/venv"
+    cron_user: "tryops"
+
+  tasks:
+    - name: Create tryops user
+      user:
+        name: "{{ cron_user }}"
+        state: present
+        shell: /bin/bash
+
+    - name: Create application directory
+      file:
+        path: "{{ app_dir }}"
+        state: directory
+        owner: "{{ cron_user }}"
+        group: "{{ cron_user }}"
+
+    - name: Install system dependencies
+      apt:
+        name:
+          - python3.11-venv
+          - python3-pip
+          - git
+        state: present
+        update_cache: yes
+
+    - name: Copy ETL application files
+      copy:
+        src: "../"
+        dest: "{{ app_dir }}"
+        owner: "{{ cron_user }}"
+        group: "{{ cron_user }}"
+      # In a real environment, this would git clone or download an artifact
+
+    - name: Create virtual environment and install dependencies
+      pip:
+        requirements: "{{ app_dir }}/pyproject.toml"
+        virtualenv: "{{ venv_dir }}"
+        virtualenv_command: python3.11 -m venv
+      become_user: "{{ cron_user }}"
+
+    - name: Setup Cron Job - Hourly ETL
+      cron:
+        name: "TryOps Hourly ETL"
+        user: "{{ cron_user }}"
+        minute: "5"  # Run at 5 minutes past every hour
+        job: "cd {{ app_dir }} && {{ venv_dir }}/bin/python scripts/tryops_hourly.py --store_id 'ALL' >> /var/log/tryops/etl_hourly.log 2>&1"
+
+    - name: Setup Cron Job - Daily ETL
+      cron:
+        name: "TryOps Daily ETL"
+        user: "{{ cron_user }}"
+        minute: "30"
+        hour: "0"  # Run at 00:30 everyday
+        job: "cd {{ app_dir }} && {{ venv_dir }}/bin/python scripts/tryops_daily.py >> /var/log/tryops/etl_daily.log 2>&1"
+
+    - name: Setup Cron Job - Monthly ETL
+      cron:
+        name: "TryOps Monthly ETL"
+        user: "{{ cron_user }}"
+        minute: "0"
+        hour: "2"
+        day: "1"  # Run at 02:00 on the 1st of every month
+        job: "cd {{ app_dir }} && {{ venv_dir }}/bin/python scripts/tryops_monthly.py >> /var/log/tryops/etl_monthly.log 2>&1"
+
+    - name: Create log directory
+      file:
+        path: /var/log/tryops
+        state: directory
+        owner: "{{ cron_user }}"
+        group: "{{ cron_user }}"
+        mode: '0755'

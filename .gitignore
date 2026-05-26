@@ -1,0 +1,26 @@
+# Terraform
+**/.terraform/
+*.tfstate
+*.tfstate.backup
+*.tfvars
+!*.tfvars.example
+
+# Python
+__pycache__/
+*.py[cod]
+venv/
+.env
+
+# Node
+node_modules/
+.next/
+build/
+
+# IDE
+.vscode/
+.idea/
+
+# Secrets
+*-credentials.json
+service-account-*.json
+*.zip
