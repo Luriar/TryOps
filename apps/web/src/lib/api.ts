@@ -27,5 +27,10 @@ export async function fetchWithAuth(endpoint: string, options: RequestInit = {})
     throw new Error(errorData.message || `API error: ${response.status}`);
   }
 
-  return response.json();
+  const data = await response.json();
+  if (data._disclaimer) {
+    console.warn("[TryOps Query API Warning]:", data._disclaimer);
+  }
+
+  return data;
 }
