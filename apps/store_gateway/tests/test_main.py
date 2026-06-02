@@ -22,7 +22,7 @@ def test_health_check():
                 assert response.status_code == 200
                 assert response.json()["status"] == "healthy"
 
-@patch("store_gateway.main.uvicorn.run")
+@patch("uvicorn.run")
 def test_main(mock_run):
     main()
     mock_run.assert_called_once()
