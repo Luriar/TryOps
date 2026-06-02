@@ -8,6 +8,9 @@ class Config:
     # Store Identifier
     STORE_ID: str = os.getenv("STORE_ID", "store_default")
     
+    # Environment
+    ENVIRONMENT: str = os.getenv("ENVIRONMENT", "dev")
+    
     # Cloud Run Ingest Endpoint
     INGEST_URL: str = os.getenv("INGEST_URL", "http://localhost:8080/ingest")
     
@@ -15,7 +18,8 @@ class Config:
     GCP_SA_KEY_PATH: str = os.getenv("GCP_SA_KEY_PATH", "")
     
     # SQLCipher Encryption Key
-    SQLCIPHER_KEY: str = os.getenv("SQLCIPHER_KEY", "dev-insecure-key")
+    SQLCIPHER_KEY: str = os.getenv("SQLCIPHER_KEY", "")
+    DEV_FALLBACK_KEY: str = os.getenv("DEV_FALLBACK_KEY", "local-dev-fallback-key")
     
     # SQLite DB Path
     DB_PATH: str = os.getenv("DB_PATH", "gateway.db")

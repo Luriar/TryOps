@@ -1,3 +1,13 @@
+import sys
+try:
+    import pysqlcipher3
+except ImportError:
+    import sqlite3
+    import types
+    mock_module = types.ModuleType('pysqlcipher3')
+    mock_module.dbapi2 = sqlite3
+    sys.modules['pysqlcipher3'] = mock_module
+
 import pytest
 from unittest.mock import patch, AsyncMock
 from store_gateway.gcp_publisher import publish_to_gcp

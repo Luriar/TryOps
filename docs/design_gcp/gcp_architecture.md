@@ -391,9 +391,9 @@ locals {
   }
 }
 
-# 모듈별 추가 라벨
-# - modules/data/main.tf: module = "data"
-# - modules/compute/main.tf: module = "compute"
+# 모듈별 추가 라벨 (반드시 5종 라벨 완성)
+# - modules/data/main.tf: module = "data", cost_center = "ingest"
+# - modules/compute/main.tf: module = "compute", cost_center = "etl"
 # 등
 ```
 

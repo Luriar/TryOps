@@ -14,9 +14,11 @@ def get_store_status(store_id: str, user: UserClaims = Depends(get_current_user)
     
     if settings.use_mock_data:
         return add_disclaimer({
+            "brand_id": user.brand_id,
+            "store_id": store_id,
             "rooms": [
                 {"id": 1, "status": "empty", "duration": 0},
-                {"id": 2, "status": "warning", "duration": 8, "message": "Needs assistance"}
+                {"id": 2, "status": "warning", "duration": 8, "message": f"Needs assistance at {store_id}"}
             ]
         })
 
@@ -44,6 +46,8 @@ def get_manager_data(store_id: str, user: UserClaims = Depends(get_current_user)
     
     if settings.use_mock_data:
         return add_disclaimer({
+            "brand_id": user.brand_id,
+            "store_id": store_id,
             "assistance_conversion": 42,
             "no_assistance_conversion": 22
         })

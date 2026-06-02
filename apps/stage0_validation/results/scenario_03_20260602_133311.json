@@ -1,0 +1,18 @@
+{
+  "scenario": "Dwell Time",
+  "accuracy": 1.0,
+  "passed": true,
+  "details": [
+    {
+      "expected": 120,
+      "actual": 120.0,
+      "passed": true
+    },
+    {
+      "expected": 480,
+      "actual": 480.0,
+      "passed": true
+    }
+  ],
+  "timestamp": "20260602_133311"
+}

@@ -1,0 +1,52 @@
+version: '3.8'
+
+services:
+  pubsub-emulator:
+    image: gcr.io/google.com/cloudsdktool/cloud-sdk:emulators
+    command: gcloud beta emulators pubsub start --host-port=0.0.0.0:8085
+    ports:
+      - "8085:8085"
+    environment:
+      - PUBSUB_PROJECT_ID=tryops
+
+  mqtt-broker:
+    image: eclipse-mosquitto:latest
+    ports:
+      - "1883:1883"
+    volumes:
+      - ./infra/docker/mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
+
+  gcp-ingest:
+    build: 
+      context: ./apps/gcp_ingest
+    ports:
+      - "8080:8080"
+    environment:
+      - PUBSUB_EMULATOR_HOST=pubsub-emulator:8085
+      - PUBSUB_TOPIC=tryops_events
+      - GCP_PROJECT=tryops
+      - ENVIRONMENT=dev
+    depends_on:
+      - pubsub-emulator
+
+  gcp-query:
+    build:
+      context: ./apps/gcp_query
+    ports:
+      - "8081:8080"
+    environment:
+      - MOCK_MODE=True
+      - ENVIRONMENT=dev
+
+  store-gateway:
+    build:
+      context: ./apps/store_gateway
+    environment:
+      - MQTT_BROKER=mqtt-broker
+      - MQTT_PORT=1883
+      - INGEST_API_URL=http://gcp-ingest:8080
+      - ENVIRONMENT=dev
+      - DEV_FALLBACK_KEY=local-dev-fallback
+    depends_on:
+      - mqtt-broker
+      - gcp-ingest

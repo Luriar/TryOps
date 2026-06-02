@@ -12,12 +12,13 @@ def get_brand_insights(user: UserClaims = Depends(get_current_user)):
     
     if settings.use_mock_data:
         return add_disclaimer({
+            "brand_id": user.brand_id,
             "insights": [
                 {"message": f"[{user.brand_id}] SKU_LEGGINGS_M_BLACK: Hesitation 0.78 (High)", "type": "warning"},
-                {"message": "Gangnam Store fitting friction 0.85", "type": "alert"}
+                {"message": f"[{user.brand_id}] Gangnam Store fitting friction 0.85", "type": "alert"}
             ],
             "skuData": [
-                {"name": "SKU-001", "tryOn": 87, "conversion": 24, "hesitation": 0.78}
+                {"name": f"{user.brand_id}-SKU-001", "tryOn": 87, "conversion": 24, "hesitation": 0.78}
             ]
         })
 
@@ -41,6 +42,8 @@ def get_sku_detail(sku_id: str, user: UserClaims = Depends(get_current_user)):
     
     if settings.use_mock_data:
         return add_disclaimer({
+            "brand_id": user.brand_id,
+            "sku_id": sku_id,
             "tryOn": 87,
             "tryOnTrend": 16,
             "conversion": 24,

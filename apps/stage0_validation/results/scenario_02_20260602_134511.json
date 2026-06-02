@@ -1,0 +1,23 @@
+{
+  "scenario": "Hesitation Pattern",
+  "accuracy": 1.0,
+  "passed": true,
+  "details": [
+    {
+      "pattern": "A",
+      "score": 0.18,
+      "passed": true
+    },
+    {
+      "pattern": "B",
+      "score": 0.72,
+      "passed": true
+    },
+    {
+      "pattern": "C",
+      "score": 0.12,
+      "passed": true
+    }
+  ],
+  "timestamp": "20260602_134511"
+}

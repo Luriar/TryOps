@@ -1,7 +1,19 @@
+import sys
+try:
+    import pysqlcipher3
+except ImportError:
+    # Allow tests to run locally by mocking pysqlcipher3 with sqlite3
+    import sqlite3
+    import types
+    mock_module = types.ModuleType('pysqlcipher3')
+    mock_module.dbapi2 = sqlite3
+    sys.modules['pysqlcipher3'] = mock_module
+
 import pytest
 import os
 from contextlib import closing
 from store_gateway.storage import Storage
+import store_gateway.config as cfg
 
 @pytest.fixture
 def test_storage():
@@ -9,12 +21,30 @@ def test_storage():
     if os.path.exists(db_path):
         os.remove(db_path)
     
-    store = Storage(db_path=db_path, key="test-key")
+    # Store Gateway uses Option C, so for standard tests we can use a key or rely on dev fallback
+    store = Storage(db_path=db_path)
     yield store
     
     # Cleanup
     if os.path.exists(db_path):
         os.remove(db_path)
+
+def test_storage_option_c_dev_fallback(monkeypatch):
+    monkeypatch.setattr(cfg.config, "ENVIRONMENT", "dev")
+    monkeypatch.setattr(cfg.config, "SQLCIPHER_KEY", "")
+    monkeypatch.setattr(cfg.config, "DEV_FALLBACK_KEY", "fallback")
+    
+    store = Storage(db_path="test_option_c.db")
+    assert store.key == "fallback"
+    if os.path.exists("test_option_c.db"):
+        os.remove("test_option_c.db")
+    
+def test_storage_option_c_prod_missing_key(monkeypatch):
+    monkeypatch.setattr(cfg.config, "ENVIRONMENT", "production")
+    monkeypatch.setattr(cfg.config, "SQLCIPHER_KEY", "")
+    
+    with pytest.raises(RuntimeError, match="CRITICAL: SQLCIPHER_KEY is missing"):
+        Storage(db_path="test_option_c2.db")
 
 def test_insert_raw_csi(test_storage):
     test_storage.insert_raw_csi("node_1", 1, 1000, -45, '{"data": [0.1]}')

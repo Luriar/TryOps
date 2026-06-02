@@ -499,11 +499,19 @@ Info (Slack):
 git clone https://github.com/tryops/tryops.git
 cd tryops
 make setup        # Python venv + Node deps + LocalStack 시작
+docker compose up -d  # 매장 게이트웨이 + LocalStack (SQLCipher 의존성 포함된 통합 환경)
 make test         # 모든 단위 테스트
 make dev-web      # Next.js 로컬 개발 서버
 ```
 
-### 7.2 LocalStack 활용
+### 7.2 Stage 1 통합 테스트 (Docker Compose)
+
+본격적인 클라우드 배포 전 `docker-compose.yml`을 활용하여 Stage 1 환경을 검증합니다.
+- **통합 스택**: 매장 게이트웨이, MQTT 브로커(Mosquitto), GCP Pub/Sub 에뮬레이터, GCP Query API 등 다중 앱 동시 실행
+- **환경 일치성**: `apps/*/Dockerfile`은 SQLCipher(`pysqlcipher3`, `libsqlcipher-dev`) 등 운영 환경과 완벽히 동일한 보안/라이브러리 종속성을 갖춰 '내 컴퓨터에서는 되는데' 식의 문제를 원천 차단합니다.
+- **실행**: `docker compose up -d --build`로 컨테이너 가동 후 `docker compose ps`로 상태 확인
+
+### 7.3 LocalStack 활용
 
 AWS 서비스 로컬 에뮬레이션:
 - S3 · Lambda · DynamoDB · Firehose · API Gateway · Cognito
@@ -520,7 +528,7 @@ services:
       - SERVICES=s3,lambda,firehose,dynamodb,apigateway,cognito-idp
 ```
 
-### 7.3 매장 게이트웨이 시뮬레이터
+### 7.4 매장 게이트웨이 시뮬레이터
 
 ```python
 # apps/store_gateway/simulator.py

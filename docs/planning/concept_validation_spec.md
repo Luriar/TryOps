@@ -255,9 +255,10 @@ def synthesize_tryops_data(hm_articles_path, hm_transactions_path):
 - 시나리오 1 (점유 추정) 실험
 
 **Week 3: 검증 시나리오**
-- 시나리오 2~5 차례 실험
+- 5종 시나리오 분리 스크립트(`run_stage0_*.py`) 차례 실험
 - 가상 RFID 데이터 합성 (H&M 데이터셋)
 - Phantom Detection 알고리즘 v1
+- 결과 JSON 저장 (`apps/stage0_validation/results/`)
 - 결과 분석
 
 **Week 4: 결론 + 보고**
@@ -320,6 +321,13 @@ def synthesize_tryops_data(hm_articles_path, hm_transactions_path):
 
 ### 7.2 코드 자산
 
+- `apps/stage0_validation/scripts/`: 5종 시나리오 분리 스크립트 (통과 기준 80%/90%/60% 별도 측정)
+  - `run_stage0_01_occupancy.py`
+  - `run_stage0_02_hesitation.py`
+  - `run_stage0_03_dwell_time.py`
+  - `run_stage0_04_phantom.py`
+  - `run_stage0_05_noise.py`
+  - `run_stage0_all.py`
 - ESP32-S3 펌웨어 (Stage 1 매장 펌웨어의 기반)
 - Polars 기반 CSI 분석 코드 (Stage 1 매장 게이트웨이 SW의 기반)
 - 가상 RFID 합성 스크립트 (Stage 1 시뮬레이션 자료)

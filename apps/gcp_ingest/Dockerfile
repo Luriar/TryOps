@@ -8,7 +8,7 @@ ENV PYTHONUNBUFFERED=1
 WORKDIR /app
 
 # Upgrade pip and install standard dependencies
-COPY pyproject.toml .
+COPY pyproject.toml README.md ./
 RUN pip install --upgrade pip hatchling
 
 # Install the app dependencies

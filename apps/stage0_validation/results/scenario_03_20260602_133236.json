@@ -1,0 +1,9 @@
+{
+  "scenario": "Dwell Time",
+  "accuracy": 0.0,
+  "passed": false,
+  "details": {
+    "error": "Expected 2 sessions, got 1"
+  },
+  "timestamp": "20260602_133236"
+}

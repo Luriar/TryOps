@@ -1,0 +1,248 @@
+{
+  "scenario": "Occupancy Detection",
+  "accuracy": 1.0,
+  "passed": true,
+  "details": [
+    {
+      "phase": "empty",
+      "time": "2026-06-02T13:45:11.457769",
+      "activity_score": 0.04696773822225756,
+      "passed": true
+    },
+    {
+      "phase": "empty",
+      "time": "2026-06-02T13:46:11.457769",
+      "activity_score": 0.04468766667483152,
+      "passed": true
+    },
+    {
+      "phase": "empty",
+      "time": "2026-06-02T13:47:11.457769",
+      "activity_score": 0.050200995782251435,
+      "passed": true
+    },
+    {
+      "phase": "empty",
+      "time": "2026-06-02T13:48:11.457769",
+      "activity_score": 0.05356303894989647,
+      "passed": true
+    },
+    {
+      "phase": "empty",
+      "time": "2026-06-02T13:49:11.457769",
+      "activity_score": 0.051884911005091294,
+      "passed": true
+    },
+    {
+      "phase": "empty",
+      "time": "2026-06-02T13:50:11.457769",
+      "activity_score": 0.05759086376879704,
+      "passed": true
+    },
+    {
+      "phase": "empty",
+      "time": "2026-06-02T13:51:11.457769",
+      "activity_score": 0.05133366077167303,
+      "passed": true
+    },
+    {
+      "phase": "empty",
+      "time": "2026-06-02T13:52:11.457769",
+      "activity_score": 0.05321228649806692,
+      "passed": true
+    },
+    {
+      "phase": "empty",
+      "time": "2026-06-02T13:53:11.457769",
+      "activity_score": 0.04223050475408965,
+      "passed": true
+    },
+    {
+      "phase": "empty",
+      "time": "2026-06-02T13:54:11.457769",
+      "activity_score": 0.048831195597070755,
+      "passed": true
+    },
+    {
+      "phase": "static",
+      "time": "2026-06-02T13:55:11.457769",
+      "activity_score": 0.15572414357336622,
+      "passed": true
+    },
+    {
+      "phase": "static",
+      "time": "2026-06-02T13:56:11.457769",
+      "activity_score": 0.13285219601930257,
+      "passed": true
+    },
+    {
+      "phase": "static",
+      "time": "2026-06-02T13:57:11.457769",
+      "activity_score": 0.15810295480720862,
+      "passed": true
+    },
+    {
+      "phase": "static",
+      "time": "2026-06-02T13:58:11.457769",
+      "activity_score": 0.15055453364729637,
+      "passed": true
+    },
+    {
+      "phase": "static",
+      "time": "2026-06-02T13:59:11.457769",
+      "activity_score": 0.16282023174109944,
+      "passed": true
+    },
+    {
+      "phase": "static",
+      "time": "2026-06-02T14:00:11.457769",
+      "activity_score": 0.1502488288519252,
+      "passed": true
+    },
+    {
+      "phase": "static",
+      "time": "2026-06-02T14:01:11.457769",
+      "activity_score": 0.14075251654966828,
+      "passed": true
+    },
+    {
+      "phase": "static",
+      "time": "2026-06-02T14:02:11.457769",
+      "activity_score": 0.14029601284075605,
+      "passed": true
+    },
+    {
+      "phase": "static",
+      "time": "2026-06-02T14:03:11.457769",
+      "activity_score": 0.16925924268134082,
+      "passed": true
+    },
+    {
+      "phase": "static",
+      "time": "2026-06-02T14:04:11.457769",
+      "activity_score": 0.16423882291889585,
+      "passed": true
+    },
+    {
+      "phase": "moving",
+      "time": "2026-06-02T14:05:11.457769",
+      "activity_score": 0.5920083104905867,
+      "passed": true
+    },
+    {
+      "phase": "moving",
+      "time": "2026-06-02T14:06:11.457769",
+      "activity_score": 0.577822285666463,
+      "passed": true
+    },
+    {
+      "phase": "moving",
+      "time": "2026-06-02T14:07:11.457769",
+      "activity_score": 0.6207634820343848,
+      "passed": true
+    },
+    {
+      "phase": "moving",
+      "time": "2026-06-02T14:08:11.457769",
+      "activity_score": 0.49645336267827495,
+      "passed": true
+    },
+    {
+      "phase": "moving",
+      "time": "2026-06-02T14:09:11.457769",
+      "activity_score": 0.523498232166902,
+      "passed": true
+    },
+    {
+      "phase": "moving",
+      "time": "2026-06-02T14:10:11.457769",
+      "activity_score": 0.5530875111088168,
+      "passed": true
+    },
+    {
+      "phase": "moving",
+      "time": "2026-06-02T14:11:11.457769",
+      "activity_score": 0.6606029155130236,
+      "passed": true
+    },
+    {
+      "phase": "moving",
+      "time": "2026-06-02T14:12:11.457769",
+      "activity_score": 0.6074682254278146,
+      "passed": true
+    },
+    {
+      "phase": "moving",
+      "time": "2026-06-02T14:13:11.457769",
+      "activity_score": 0.6169583888452397,
+      "passed": true
+    },
+    {
+      "phase": "moving",
+      "time": "2026-06-02T14:14:11.457769",
+      "activity_score": 0.6409037744090681,
+      "passed": true
+    },
+    {
+      "phase": "empty",
+      "time": "2026-06-02T14:15:11.457769",
+      "activity_score": 0.06042334926333184,
+      "passed": true
+    },
+    {
+      "phase": "empty",
+      "time": "2026-06-02T14:16:11.457769",
+      "activity_score": 0.04241890809130778,
+      "passed": true
+    },
+    {
+      "phase": "empty",
+      "time": "2026-06-02T14:17:11.457769",
+      "activity_score": 0.04524113345431367,
+      "passed": true
+    },
+    {
+      "phase": "empty",
+      "time": "2026-06-02T14:18:11.457769",
+      "activity_score": 0.049776228311837104,
+      "passed": true
+    },
+    {
+      "phase": "empty",
+      "time": "2026-06-02T14:19:11.457769",
+      "activity_score": 0.04036575552965994,
+      "passed": true
+    },
+    {
+      "phase": "empty",
+      "time": "2026-06-02T14:20:11.457769",
+      "activity_score": 0.043260329524890846,
+      "passed": true
+    },
+    {
+      "phase": "empty",
+      "time": "2026-06-02T14:21:11.457769",
+      "activity_score": 0.05141828232997434,
+      "passed": true
+    },
+    {
+      "phase": "empty",
+      "time": "2026-06-02T14:22:11.457769",
+      "activity_score": 0.041653627944930854,
+      "passed": true
+    },
+    {
+      "phase": "empty",
+      "time": "2026-06-02T14:23:11.457769",
+      "activity_score": 0.050362230599428306,
+      "passed": true
+    },
+    {
+      "phase": "empty",
+      "time": "2026-06-02T14:24:11.457769",
+      "activity_score": 0.04616085235044916,
+      "passed": true
+    }
+  ],
+  "timestamp": "20260602_134511"
+}

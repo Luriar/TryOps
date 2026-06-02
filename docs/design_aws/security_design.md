@@ -57,7 +57,7 @@ STRIDE: Spoofing · Tampering · Repudiation · Information Disclosure · Denial
 
 ### 2.2 대응 7가지
 
-#### 대응 1: SQLite 암호화 (SQLCipher)
+#### 대응 1: SQLite 암호화 (SQLCipher) 옵션 C 적용 (강제)
 
 ```python
 import sqlcipher3 as sqlite3
@@ -68,8 +68,11 @@ conn.execute(f"PRAGMA key = '{STORE_LOCAL_KEY}'")  # 매장당 고유 키
 ```
 
 - 🟢 SQLCipher: AES-256 암호화, 오픈소스, 무료
+- 🟢 옵션 C 강제: `pysqlcipher3`를 모든 환경에서 항상 사용. Dockerfile에서 시스템 라이브러리(`libsqlcipher-dev`) 사전 설치를 통해 개발자 로컬과 운영 환경 통일
+- 🟢 옵션 A(환경변수 분기) 거부: *"production에서만 보안"* 패턴은 환경변수 누락 시 production이 평문으로 동작하는 심각한 보안 취약점 유발. *"단순함이 가장 싸다"* 원칙은 인프라의 단순함을 의미하지 보안 코드 분기 생략을 의미하지 않음 (Defense in Depth 원칙)
 - 도난 시 디스크 마운트해도 데이터 읽을 수 없음
 - 매장 게이트웨이 부팅 시 본사 KMS에서 키 가져오기 (네트워크 필요)
+- 로컬 개발 환경(`ENVIRONMENT=dev`)의 경우 `DEV_FALLBACK_KEY`를 사용하되 명시적 경고 출력
 
 #### 대응 2: API 키 회전 (Rotation)
 

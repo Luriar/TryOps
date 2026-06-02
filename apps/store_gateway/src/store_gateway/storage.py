@@ -6,13 +6,9 @@ from datetime import datetime, timedelta
 from contextlib import closing
 
 try:
-    # Production: Use pysqlcipher3
     from pysqlcipher3 import dbapi2 as sqlcipher
-    USE_SQLCIPHER = True
 except ImportError:
-    # Development: Fallback to standard sqlite3
-    sqlcipher = sqlite3
-    USE_SQLCIPHER = False
+    raise RuntimeError("pysqlcipher3 is strictly required per security guidelines. Please ensure it is installed.")
 
 from .config import config
 
@@ -24,19 +20,30 @@ class Storage:
     Stores raw CSI, RFID events, POS events, and 1-minute aggregates.
     """
     
-    def __init__(self, db_path: str = config.DB_PATH, key: str = config.SQLCIPHER_KEY):
+    def __init__(self, db_path: str = config.DB_PATH):
         self.db_path = db_path
-        self.key = key
+        
+        # Option C Key Management
+        if config.SQLCIPHER_KEY:
+            self.key = config.SQLCIPHER_KEY
+        elif config.ENVIRONMENT == "dev":
+            self.key = config.DEV_FALLBACK_KEY
+            logger.warning("🟡 WARNING: Using DEV_FALLBACK_KEY for SQLCipher. DO NOT USE IN PRODUCTION.")
+        else:
+            raise RuntimeError("🔴 CRITICAL: SQLCIPHER_KEY is missing in a non-dev environment. Aborting.")
+            
         self._init_db()
 
     def get_connection(self):
         """Get an encrypted database connection."""
         conn = sqlcipher.connect(self.db_path)
-        if USE_SQLCIPHER:
-            # Enable AES-256 encryption via SQLCipher PRAGMA
-            conn.execute(f"PRAGMA key = '{self.key}';")
-            # Force cipher test
-            conn.execute("SELECT count(*) FROM sqlite_master;")
+        # Enable AES-256 encryption via SQLCipher PRAGMA
+        conn.execute(f"PRAGMA key = '{self.key}';")
+        # Force cipher test
+        conn.execute("SELECT count(*) FROM sqlite_master;")
+        
+        # We need sqlite3.Row for dict-like access, sqlcipher provides it or we can use standard sqlite3.Row
+        import sqlite3
         conn.row_factory = sqlite3.Row
         return conn
 

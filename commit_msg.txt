@@ -1,0 +1,16 @@
+feat: TryOps integration review - security, testing, docker, stage0
+
+- SQLCipher Option C (always enforce, no env branch) applied to store_gateway
+- Docker compose build fixed (hatchling pyproject.toml packages path)
+- All 5 containers verified Up (ingest, query, gateway, pubsub-emulator, mqtt)
+- Test coverage: gcp_query 89%, store_gateway 83%, gcp_ingest 88%, stage0 87%
+- Stage 0 validation scripts split into 5 scenarios (run_stage0_01~05.py)
+- Stage 0 disclaimer added: STRUCTURE_OK (HW 실측 필요)
+- Mock brand_id isolation enforced in brand.py and store.py
+- docs: security_design.md Option A rejection + Defense in Depth
+- docs: devops_setup.md Stage 1 docker-compose guide added
+- docs: concept_validation_spec.md stage0 scripts listed
+
+🟡 gcp_architecture.md: AWS remnant cleanup pending (minor)
+🔴 apps/web Vitest: pending (frontend test setup deferred)
+🔴 Real accuracy validation: requires ESP32-S3 hardware + physical space

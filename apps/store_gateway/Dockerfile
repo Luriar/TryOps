@@ -6,13 +6,14 @@ RUN apt-get update && apt-get install -y \
     build-essential \
     sqlcipher \
     libsqlcipher-dev \
+    libssl-dev \
     git \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
 # Upgrade pip and install standard dependencies
-COPY pyproject.toml .
+COPY pyproject.toml README.md ./
 RUN pip install --upgrade pip
 RUN pip install hatchling
 # Install pysqlcipher3 from source so it binds to the system's libsqlcipher
