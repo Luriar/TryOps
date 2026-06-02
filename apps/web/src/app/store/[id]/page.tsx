@@ -13,6 +13,10 @@ const mockRooms = [
   { id: 5, status: 'empty', duration: 0 },
 ];
 
+export function generateStaticParams() {
+  return [{ id: '123' }];
+}
+
 export default function StoreDashboard({ params }: { params: Promise<{ id: string }> }) {
   const resolvedParams = use(params);
   
