@@ -4,6 +4,7 @@ import firebase_admin
 from firebase_admin import credentials, auth
 from pydantic import BaseModel
 from typing import Optional
+from .config import settings
 
 # Initialize Firebase Admin
 try:
@@ -21,6 +22,23 @@ class UserClaims(BaseModel):
 
 def get_current_user(credentials: HTTPAuthorizationCredentials = Security(security)) -> UserClaims:
     token = credentials.credentials
+    
+    if settings.use_mock_data and token.startswith("mock-token-"):
+        role = "data_lead"
+        store_id = None
+        if "store-manager" in token:
+            role = "store_manager"
+            store_id = "123"
+            if "wrong" in token:
+                store_id = "999"
+                
+        return UserClaims(
+            uid=token,
+            role=role,
+            brand_id="brand1",
+            store_id=store_id
+        )
+
     try:
         decoded_token = auth.verify_id_token(token)
         # Extract custom claims
