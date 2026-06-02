@@ -18,6 +18,11 @@ export function AppLayout({ children }: { children: ReactNode }) {
   }
 
   const handleLogout = () => {
+    if (process.env.NEXT_PUBLIC_USE_MOCK_DATA === "true") {
+      localStorage.removeItem("mock_auth_role");
+      window.dispatchEvent(new Event("storage"));
+      return;
+    }
     auth.signOut();
   };
 

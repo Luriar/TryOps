@@ -14,6 +14,35 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
 
   useEffect(() => {
+    if (process.env.NEXT_PUBLIC_USE_MOCK_DATA === 'true') {
+      const checkMockAuth = () => {
+        const role = localStorage.getItem("mock_auth_role");
+        if (role) {
+          const mockUser = {
+            uid: 'mock-uid',
+            email: 'mock@tryops.com',
+            getIdTokenResult: async () => ({
+              claims: { role, brand_id: 'brand1', store_id: role === 'store_manager' ? '123' : null }
+            })
+          } as any;
+          
+          const storeId = role === 'store_manager' ? '123' : null;
+          setAuth(mockUser, 'brand1', role as Role, storeId);
+          
+          if (pathname === '/login' || pathname === '/') {
+            router.replace(role === 'store_manager' ? `/store/${storeId}` : '/brand/insights');
+          }
+        } else {
+          setAuth(null, null, null, null);
+          if (pathname !== '/login') router.replace('/login');
+        }
+      };
+      
+      checkMockAuth();
+      window.addEventListener("storage", checkMockAuth);
+      return () => window.removeEventListener("storage", checkMockAuth);
+    }
+
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
         // Fetch custom claims from Firebase Token

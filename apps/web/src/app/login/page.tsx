@@ -14,6 +14,14 @@ export default function LoginPage() {
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
+
+    if (process.env.NEXT_PUBLIC_USE_MOCK_DATA === "true") {
+      const role = email.includes("manager") ? "store_manager" : "data_lead";
+      localStorage.setItem("mock_auth_role", role);
+      window.dispatchEvent(new Event("storage"));
+      return;
+    }
+
     try {
       await signInWithEmailAndPassword(auth, email, password);
       // Routing is handled globally by AuthProvider.
