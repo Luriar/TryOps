@@ -1,7 +1,10 @@
 """
+시나리오 2: Hesitation 패턴 — v2.
+
 🔴 본 스크립트는 시뮬레이션 데이터 기반 알고리즘 구조 검증.
-실제 정확도는 ESP32-S3 하드웨어 + 실제 피팅룸 환경 측정 후 확정.
-concept_validation_spec.md 섹션 5.1 정량 기준은 HW 실측 시 적용.
+실제 정확도는 ESP32-C6 + mmWave 하드웨어 실측 후 확정.
+v2 노트: Hesitation의 핵심 동인은 RFID 사이즈 스왑(가중치 0.4)이라 센서 교체 영향 최소.
+activity_score는 융합 윈도우 값(CSI 우선)을 사용 (spec v2 §3.1).
 """
 import os
 import json
@@ -36,12 +39,15 @@ def mock_session(duration_mins, avg_activity, sizes_tried):
     end_ms = now_ms + duration_mins * 60 * 1000
     
     # Mock CSI Window (just 1 row for simplicity that spans the duration)
+    # v2 융합 윈도우 스키마 (occupancy_estimate 제거, presence 계열 추가)
     csi_window = pl.DataFrame({
         "fitting_room_id": [1],
         "window_start_ms": [now_ms],
         "window_end_ms": [end_ms],
         "activity_score": [avg_activity],
-        "occupancy_estimate": [1],
+        "presence": [True],
+        "still_presence": [False],
+        "multi_occupancy_probability": [0.0],
         "movement_pattern": ["moderate"]
     })
     
