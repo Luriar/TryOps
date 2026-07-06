@@ -1,377 +1,239 @@
-# Joint Signal Specification
+# Joint Signal Specification v2
 
-> 본 문서는 `product_strategy.md` 섹션 10 Joint Signal 5종의 알고리즘 명세 골격이다. 데이터 엔지니어·ML 엔지니어가 Phase 1 시뮬레이션 데이터로 알고리즘 구현 시 참조.
->
-> **본 문서의 한계**: 실제 RuView·CSI 신호 데이터 없이 알고리즘 검증 불가. 본 명세는 알고리즘 골격 + 임계값 가설 + 검증 방법. PoC 단계에서 실측으로 정밀화.
+> v1 대비 변경: ① 센서 레이어를 mmWave+CSI 하이브리드로 교체 ② RFID 이벤트에 EPC 필드 추가,
+> Session-POS 매칭을 3단 신뢰도 구조로 ③ 6번째 신호(Ghost-read 필터) 추가
+> ④ occupancy_estimate → multi_occupancy_probability 톤다운.
+> 아키텍처 결정 근거는 `docs/ADR-001-sensor-architecture.md` 참조.
 
 ---
 
-## 0. 본 문서의 적용 범위
+## 0. 적용 범위 (v1 유지)
 
 | 항목 | Funnel Module | Flow Module |
 |---|---|---|
-| Joint Signal 5종 (본 문서) | ✅ 메인 | ❌ 적용 안 함 |
+| Joint Signal 6종 (본 문서) | ✅ 메인 | ❌ 적용 안 함 |
 | 공간 흐름 5종 | 보조 | ✅ 메인 |
-
-본 문서는 Funnel Module 전용 Joint Signal 5종에 집중. Flow Module의 공간 흐름 5종은 별도 문서 예정.
 
 ---
 
 ## 1. 입력 데이터 명세
 
-### 1.1 RFID 이벤트
+### 1.1 RFID 이벤트 (변경: epc·rssi 추가)
 
 ```json
 {
   "store_id": "store_001",
   "fitting_room_id": 3,
+  "epc": "urn:epc:id:sgtin:8801234.056789.100000000042",
   "sku_id": "SKU_LEGGINGS_M_BLACK",
-  "event_type": "enter",  // "enter" or "exit"
-  "timestamp": "2026-05-22T15:23:45.123+09:00",
-  "metadata": {
-    "category": "leggings",
-    "size": "M",
-    "color": "black",
-    "season": "2026SS"
-  }
+  "event_type": "enter",
+  "timestamp": "2026-07-06T15:23:45.123+09:00",
+  "rssi": -54,
+  "metadata": { "category": "leggings", "size": "M", "color": "black", "season": "2026FW" }
 }
 ```
 
-### 1.2 POS 결제 이벤트
+- `epc`: 개체 단위 일련번호(SGTIN). **세션-구매 결정론적 매칭의 열쇠.**
+- `rssi`: 인접 피팅룸 오독 필터링용 (임계값 이하 = 오독 후보).
+- 🔴 검증 필요: 본사 POS가 EPC 레벨 로그를 남기는지 (Month 1~3 인터뷰 1순위).
+  미보유 시 sku_id 시간창 매칭으로 강등 (3단 구조의 2단).
+
+### 1.2 POS 결제 이벤트 (변경: items[].epc 추가)
 
 ```json
 {
   "store_id": "store_001",
-  "transaction_id": "TXN_20260522_1834",
-  "timestamp": "2026-05-22T15:42:18.456+09:00",
+  "transaction_id": "TXN_20260706_1834",
+  "timestamp": "2026-07-06T15:42:18.456+09:00",
   "items": [
-    {"sku_id": "SKU_LEGGINGS_L_BLACK", "quantity": 1, "price": 89000}
+    { "epc": "urn:epc:id:sgtin:8801234.056789.100000000042",
+      "sku_id": "SKU_LEGGINGS_L_BLACK", "quantity": 1, "price": 89000 }
   ],
-  "payment_method": "card",
-  "anonymous_member_id": "hashed_id_xxx"  // 선택, 가명처리
+  "payment_method": "card"
 }
 ```
 
-### 1.3 CSI 활동 윈도우
+### 1.3 점유 윈도우 (변경: 센서 융합형으로 재정의)
 
 ```json
 {
   "store_id": "store_001",
-  "fitting_room_id": 3,
-  "window_start": "2026-05-22T15:23:00+09:00",
-  "window_end": "2026-05-22T15:24:00+09:00",
+  "zone_id": "fitting_room_3",
+  "zone_type": "fitting_room",
+  "window_start": "2026-07-06T15:23:00+09:00",
+  "window_end": "2026-07-06T15:24:00+09:00",
+  "presence": true,
+  "presence_source": "mmwave",
+  "still_presence": true,
   "activity_score": 0.74,
-  "occupancy_estimate": 1,
-  "movement_pattern": "moderate"
+  "activity_source": "csi",
+  "multi_occupancy_probability": 0.15,
+  "sensor_health": { "mmwave": "ok", "csi": "ok" }
 }
 ```
 
-CSI 윈도우는 1분 단위. activity_score는 0~1 정규화 값.
+변경 요점:
+- `presence`(재실)와 `activity_score`(활동 강도) 분리. 피팅룸 재실은 mmWave가 판정(정지 인물 포함).
+- `still_presence`: 재실인데 움직임 없음 — Assistance Need의 핵심 원신호.
+- `multi_occupancy_probability`: LD2450 타겟 수 기반 0~1 확률. **인원 수 절대값을 산출·표기하지 않는다**
+  (v1 Companion 회색지대 원칙 유지).
+- 대기구역(zone_type: "waiting_area")은 CSI 단독, `still_presence` 없음.
+- 프라이버시 바이 디자인: **raw CSI는 게이트웨이 밖으로 전송·보존하지 않는다.** 1분 집계만 적재.
 
 ---
 
-## 2. Try-on Session 정의
+## 2. Try-on Session 정의 (변경: 융합 점유 기반)
 
-여러 RFID enter/exit 이벤트 + CSI 윈도우를 결합한 *"한 명의 손님이 피팅룸에서 시도한 단일 세션"*.
-
-### 2.1 Session 생성 알고리즘
+### 2.1 Session 생성
 
 ```python
-def reconstruct_sessions(rfid_events, csi_windows, store_id, date):
+def reconstruct_sessions(rfid_events, occupancy_windows, store_id, date):
     """
-    Try-on session 재구성 알고리즘 골격.
-    
-    1. 동일 fitting_room_id의 RFID 이벤트 시간순 정렬
-    2. CSI 윈도우와 시간축 결합
-    3. CSI activity > 임계값(0.1) 구간을 "점유 구간"으로 정의
-    4. 점유 구간 안의 RFID enter/exit 이벤트를 한 세션으로 묶음
-    5. 점유 구간 종료 후 3분 이내 새 enter 이벤트는 동일 손님 가능성 (보수적으로 별 세션)
+    v2 변경점:
+    1. 점유 구간 판정을 activity_score 임계값(v1: 0.1)이 아니라
+       mmWave presence == True 연속 구간으로 정의 (hold_time 15s로 순간 끊김 보정)
+    2. RFID 이벤트는 RSSI 필터 + Ghost-read 필터(3.6) 통과분만 사용
+    3. 세션 간격 3분 규칙 유지 (보수적 별도 세션)
     """
-    # 가설: 점유 구간 정의 임계값 0.1, 세션 간격 3분
-    # PoC 검증 필요
     sessions = []
-    for room_id, events in group_by_room(rfid_events).items():
-        occupancy_windows = identify_occupancy(csi_windows, room_id, threshold=0.1)
-        for window in occupancy_windows:
-            session_rfid = [e for e in events if window.start <= e.timestamp <= window.end]
+    for room_id, events in group_by_room(filter_ghost_reads(rfid_events)).items():
+        occ = merge_presence_intervals(occupancy_windows, room_id, hold_time_s=15)
+        for interval in occ:
+            session_rfid = events_in(events, interval)
             if session_rfid:
-                sessions.append(Session(
-                    store_id=store_id,
-                    fitting_room_id=room_id,
-                    rfid_events=session_rfid,
-                    csi_window=window,
-                    duration=window.end - window.start
-                ))
+                sessions.append(Session(room_id, session_rfid, interval))
     return sessions
 ```
 
-🔴 점유 구간 임계값(0.1)·세션 간격(3분)은 모두 가설. PoC 시 RFID-CSI 시간축 매칭 정확도 검증 후 조정.
+🔴 hold_time(15s)·세션 간격(3분)은 가설. Stage 0 시나리오 3에서 정밀화.
 
-### 2.2 Session 정확도 검증
+### 2.2 Session ↔ 구매 매칭: 3단 신뢰도 구조 (신규 — v2 핵심)
 
-PoC Week 2 검증 항목:
-- 정밀도(Precision): RFID enter/exit이 같은 손님인지
-- 재현율(Recall): 손님 입실 누락 비율
-- 목표: 정밀도·재현율 90%+
+| 단계 | 방법 | 신뢰도 | 산출 |
+|---|---|---|---|
+| 1단 | **EPC 정확 매칭**: 세션에 enter한 EPC가 당일 POS items.epc에 존재 | 결정론 | "입어본 바로 그 옷이 팔림/안 팔림" |
+| 2단 | **SKU 시간창 매칭**: 같은 sku_id(또는 동일 스타일 타 사이즈)가 세션 종료 후 30분 내 결제 | 확률 (confidence 부여) | "입어보고 새 상품 집어간 케이스" 커버 |
+| 3단 | **SKU 집계**: 일/주 단위 try-on 수 vs 판매 수 | 항상 유효 | high try-on / low conversion SKU 발굴 (MD 핵심 니즈) |
+
+- conversion 라벨은 1단 > 2단 > 3단 순으로 채택하고 `match_tier` 필드에 기록.
+- 🔴 2단 시간창(30분)은 가설, PoC 검증.
+
+### 2.3 정확도 검증 (v1 유지 + 추가)
+
+- 정밀도·재현율 90%+ 목표 (PoC Week 2)
+- 추가: EPC 매칭 커버리지(전체 세션 중 1단 매칭 비율) 측정 — 영업 문구 결정 근거
 
 ---
 
-## 3. Joint Signal 5종 알고리즘 명세
+## 3. Joint Signal 6종
 
-### 3.1 Hesitation Score
+### 3.1 Hesitation Score (변경 미미)
 
-**정의**: 같은 SKU 또는 같은 카테고리의 다른 사이즈가 한 세션 안에서 반복 입출고되는 동안 CSI 활동 강도가 높게 유지되는 정도.
+v1 알고리즘 유지. 가중치 입력만 변경: `avg_activity`는 융합 activity_score 사용.
+핵심 동인은 여전히 RFID 사이즈 스왑 카운트(0.4) — 센서 교체의 영향 최소.
+임계값 가설(0.3/0.6)·검증 방법(전환율 상관, PoC 4주)·비즈니스 활용 전부 v1 유지.
 
-**알고리즘 골격**:
-
-```python
-def calculate_hesitation_score(session):
-    """
-    Hesitation Score 알고리즘.
-    
-    1. 세션 안의 RFID 이벤트 분석
-    2. 같은 SKU의 다른 사이즈 반복 입출 카운트
-    3. 세션 duration vs CSI activity 평균
-    4. 가중치 적용해 0~1 점수 반환
-    """
-    same_category_size_changes = count_size_swaps(session.rfid_events)
-    avg_activity = mean(session.csi_window.activity_score)
-    duration_factor = min(session.duration / 600, 1.0)  # 10분 기준 정규화
-    
-    score = (
-        0.4 * normalize(same_category_size_changes, max=5) +
-        0.3 * avg_activity +
-        0.3 * duration_factor
-    )
-    return score  # 0~1
-```
-
-**임계값 가설** (🔴 PoC 검증 필요):
-- 0.0 ~ 0.3: 낮은 망설임 (빠른 결정)
-- 0.3 ~ 0.6: 중간 망설임 (일반적)
-- 0.6 ~ 1.0: 높은 망설임 (구매 실패 원인 후보)
-
-**검증 방법**:
-- PoC 매장 3개에서 4주간 측정
-- Hesitation Score와 conversion(구매/미구매)의 상관관계 분석
-- 0.6+ 세션의 conversion rate가 0.0~0.3 세션 대비 통계적으로 낮은지 확인
-
-**비즈니스 활용**:
-- 본사 MD: high try-on / low conversion SKU 발견 → 사이즈 가이드 개선
-- 매장 매니저: 사이즈 비교 행동 빈도 → 사이즈 차트 검증
-
-### 3.2 Assistance Need Signal
-
-**정의**: 입실 후 일정 시간 경과, 추가 사이즈/색상 요청 RFID 이벤트 없음, CSI 활동 강도 중간 이하 → 고객이 도움 필요하지만 호출 못 하는 상태 후보.
-
-**알고리즘 골격**:
+### 3.2 Assistance Need Signal (변경: still_presence 기반)
 
 ```python
 def calculate_assistance_need(session, current_time):
     """
-    Assistance Need 실시간 알람.
-    
-    1. 입실 후 경과 시간 측정 (current_time - session.start)
-    2. 입실 후 추가 RFID enter 이벤트 카운트 (0이면 도움 필요 가능성)
-    3. 최근 1분 CSI activity (낮으면 정체)
-    4. 임계값 충족 시 알람
+    v2: '활동 낮음'(CSI, 부재와 혼동)이 아니라
+        '재실인데 정지'(mmWave still_presence)를 직접 사용 — 오탐 구조 제거.
     """
     elapsed = (current_time - session.start).total_seconds()
-    additional_requests = count_additional_enters(session, after=session.start)
-    recent_activity = session.csi_window.recent_activity(minutes=1)
-    
-    if elapsed > 420 and additional_requests == 0 and recent_activity < 0.3:
+    additional_requests = count_additional_enters(session)
+    still_ratio = session.recent_still_presence_ratio(minutes=2)
+
+    if elapsed > 420 and additional_requests == 0 and still_ratio > 0.7:
         return AlertLevel.HIGH
-    elif elapsed > 300 and recent_activity < 0.5:
+    elif elapsed > 300 and still_ratio > 0.5:
         return AlertLevel.MEDIUM
     return AlertLevel.NONE
 ```
 
-**임계값 가설** (🔴 PoC 검증 필요):
-- 입실 후 5분 + 활동 강도 0.5 미만 → 중간 알람
-- 입실 후 7분 + 활동 강도 0.3 미만 → 높은 알람
+🔴 임계값(7분/0.7, 5분/0.5)은 가설. 직원 개입 → 전환 +10%p 검증 기준 v1 유지.
 
-**검증 방법**:
-- PoC 매장 직원에게 알람 발생 시 응대 시도 권장
-- 알람 발생 세션의 구매 전환율 vs 미발생 세션 비교
-- 직원 개입 후 구매 전환 +10%p 이상 시 알고리즘 유효
+### 3.3 Companion Effect (변경: 입력 교체)
 
-**비즈니스 활용**:
-- 매장 매니저: 실시간 알람 → 직원 개입 타이밍
-- 본사: 매장별 Assistance Need 발생률 → 직원 배치 의사결정
+v1 로직 유지하되 `multi_occupancy_ratio` → `mean(multi_occupancy_probability)`.
+표현 원칙 유지: "동행 가능성 신호"로만. 인원 수 절대값 금지.
 
-### 3.3 Companion Effect
+### 3.4 Fitting Friction Score (변경 없음)
 
-**정의**: 한 세션 안에서 2명 이상 존재 가능성 또는 동행자 행동 패턴 관측.
+대기 강도 입력이 대기구역 CSI activity_score라는 점만 명시. 알고리즘·활용 v1 유지.
 
-**알고리즘 골격**:
+### 3.5 Phantom Try-on Detection (변경: presence 기반)
 
-```python
-def detect_companion(session):
-    """
-    Companion Effect 추정.
-    
-    핵심: "정확한 인원 측정" 표현 피하고 "동행 가능성 신호" 로 톤다운.
-    
-    1. CSI 점유 추정값이 2 이상인 구간 비율
-    2. RFID 이벤트의 동시성 (같은 fitting_room에 다른 SKU 입력)
-    3. 세션 duration이 평균보다 길고 활동 패턴 복잡함
-    """
-    multi_occupancy_ratio = session.csi_window.occupancy_estimate_above(2) / len(session.csi_window)
-    concurrent_rfid = check_concurrent_skus(session.rfid_events)
-    long_duration = session.duration > 600  # 10분
-    
-    companion_probability = (
-        0.5 * multi_occupancy_ratio +
-        0.3 * (1.0 if concurrent_rfid else 0) +
-        0.2 * (1.0 if long_duration else 0)
-    )
-    return companion_probability  # 0~1
-```
+트리거를 `activity_score > 0.3`에서 `presence == True and duration > 60s`로 교체
+(mmWave 재실이 더 확실). 나머지 v1 유지. 목표 정확도 80%+ 유지.
 
-**🔴 회색지대 주의**:
-- 의료기기법·개인정보 회피 위해 *"정확한 인원 카운트"* 표현 금지
-- *"동행 가능성 신호"* 로만 표현
+### 3.6 Ghost-read Filter (신규 — Phantom의 역방향)
 
-**비즈니스 활용**:
-- 본사: 동행 매장 운영 분석 (가족 매장 vs 단독 매장)
-- 매장: 동행자 응대 가이드 작성
-
-### 3.4 Fitting Friction Score
-
-**정의**: RFID 회전율 + CSI 대기 강도를 결합한 매장 단위 마찰 지수.
-
-**알고리즘 골격**:
+**정의**: RFID enter 이벤트가 있는데 해당 피팅룸에 점유가 없음 → 인접 피팅룸 오독 의심.
 
 ```python
-def calculate_fitting_friction(store, time_window):
+def detect_ghost_reads(rfid_events, occupancy_windows):
     """
-    Fitting Friction Score - 매장 단위 시간대별 마찰 지수.
-    
-    1. RFID 회전율: 시간당 fitting_room 사용 횟수
-    2. CSI 대기 강도: 피팅룸 외부 영역 CSI 활동
-    3. POS 결제 시각 vs 피팅룸 입실 시각의 평균 간격
+    RFID 실배포 최대 리스크(인접 존 stray read)를 센서 융합으로 필터링.
+    1. enter 이벤트 시각 ±30s에 해당 room presence == False → ghost 후보
+    2. 같은 EPC가 같은 시각대 인접 room(점유 있음)에서 미검출이면 → 재배정 시도
+    3. ghost 확정분은 세션 재구성에서 제외 + RFID 운영팀 알람
     """
-    rfid_turnover = count_sessions(store, time_window) / time_window.hours
-    wait_intensity = mean_external_csi_activity(store, time_window)
-    avg_purchase_delay = mean_pos_to_fitting_delay(store, time_window)
-    
-    friction = (
-        0.4 * normalize(rfid_turnover, max=10) +
-        0.4 * wait_intensity +
-        0.2 * normalize(avg_purchase_delay, max=300)
-    )
-    return friction
 ```
 
-**임계값 해석**:
-- 상황 A: RFID 회전율 높음 + CSI 대기 강도 높음 → 피팅룸 돌아가지만 대기 병목
-- 상황 B: RFID 회전율 보통 + CSI 대기 강도 낮음 → 피팅룸 진입 전 포기 (RFID로 절대 못 잡는 신호)
+**비즈니스 활용**: RFID 솔루션사 파트너십 영업 훅 — "귀사 리더의 오독을 우리가 잡아드립니다."
+Phantom(누락)과 Ghost(오독)를 묶어 "RFID 데이터 품질 모듈"로 패키징.
 
-**비즈니스 활용**:
-- 매장 매니저: 피크 시간대 피팅룸 전담 직원 배치
-- 본사: 매장 신규 출점 시 피팅룸 개수 의사결정
-
-### 3.5 Phantom Try-on Detection
-
-**정의**: CSI상 입실 감지되었지만 RFID 이벤트 없음 → RFID 데이터 품질 검증.
-
-**알고리즘 골격**:
-
-```python
-def detect_phantom(csi_windows, rfid_events, threshold=0.3):
-    """
-    Phantom Try-on Detection - RFID 누락 의심 케이스 발견.
-    
-    1. CSI 점유 추정 활동이 임계값 이상인 구간 식별
-    2. 같은 시간대에 RFID enter 이벤트 부재 확인
-    3. 알람 생성
-    """
-    phantoms = []
-    for window in csi_windows:
-        if window.activity_score > threshold and window.duration > 60:
-            rfid_in_window = [e for e in rfid_events if window.start <= e.timestamp <= window.end]
-            if not rfid_in_window:
-                phantoms.append(PhantomAlert(
-                    store_id=window.store_id,
-                    fitting_room_id=window.fitting_room_id,
-                    timestamp=window.start,
-                    confidence=window.activity_score
-                ))
-    return phantoms
-```
-
-**비즈니스 활용**:
-- 본사 RFID 운영팀: 누락 케이스 발견 → RFID 인프라 점검
-- 영업 훅: *"PoC 첫 주에 Phantom 5건 발견했습니다"*
-
-**검증 방법**:
-- PoC 매장에서 RFID 운영팀 확인 → Phantom 알람의 실제 RFID 누락 정확도
-- 정확도 80%+ 목표
+🔴 검증: Stage 1 PoC Week 1~2에서 실측 오독률·필터 정확도 측정.
+하드웨어 대응(차폐재, 편파, RSSI 임계값)은 Stage 1 설치 가이드에 별도 문서화.
 
 ---
 
-## 4. Joint Signal 알고리즘 통합 흐름
+## 4. 통합 흐름 (v1 대비 Stage 0.5 추가)
 
 ```
-[Raw Data 수집]
-  RFID + POS + CSI raw
-       ↓
-[Stage 1: Session Reconstruction]
-  reconstruct_sessions() → Try-on Session 마트
-       ↓
-[Stage 2: Joint Signal 계산 (배치)]
-  - Hesitation Score (세션 단위)
-  - Companion Effect (세션 단위)
-  - Fitting Friction Score (매장 단위)
-       ↓
-[Stage 3: Real-time Alert (스트리밍)]
-  - Assistance Need Signal (실시간)
-  - Phantom Try-on Detection (실시간)
-       ↓
-[Stage 4: 분석 마트 적재]
-  - SKU-Session 마트 (Hesitation 분석)
-  - 매장-시간 마트 (Friction 분석)
-  - 본사 통합 마트 (전사 트렌드)
-       ↓
-[Stage 5: 본사·매장 대시보드]
+[Raw 수집] RFID(epc) + POS(epc) + mmWave/CSI 1분 윈도우
+    ↓
+[Stage 0.5: 데이터 품질] Ghost-read 필터 + RSSI 필터   ← 신규
+    ↓
+[Stage 1: Session Reconstruction] presence 기반 + 3단 매칭
+    ↓
+[Stage 2: 배치 신호] Hesitation / Companion / Friction
+    ↓
+[Stage 3: 실시간] Assistance Need / Phantom / Ghost 알람
+    ↓
+[Stage 4~5: 마트 적재 → 대시보드] (v1 유지)
 ```
 
 ---
 
-## 5. PoC 단계 검증 액션
+## 5. 센서-신호 매핑표 (신규)
 
-### 5.1 Week 1: 데이터 수집 안정화
-
-- ESP32-S3 노드 설치 (피팅룸당 1~2개)
-- RFID·POS 데이터 통합 적재
-- CSI raw 데이터 품질 확인
-
-### 5.2 Week 2: Session Reconstruction 검증
-
-- 정밀도·재현율 90%+ 목표
-- 점유 구간 임계값(0.1)·세션 간격(3분) 정밀화
-
-### 5.3 Week 3: Joint Signal 5종 측정
-
-- Hesitation Score 분포 확인
-- Phantom Detection 정확도 80%+
-- Friction Score 시간대별 트렌드
-
-### 5.4 Week 4: 비즈니스 임팩트 검증
-
-- high try-on / low conversion SKU 5개 이상 발굴
-- MD 회의 액션 1개 이상 채택
-- 알고리즘 v2 정밀화
+| 신호 | 1차 센서 | 보조 | 비고 |
+|---|---|---|---|
+| Session 점유 판정 | mmWave presence | CSI | hold_time 보정 |
+| Hesitation | RFID(epc 스왑) | 융합 activity | 센서 의존 최소 |
+| Assistance Need | mmWave still_presence | RFID 무요청 | CSI 단독 불가 |
+| Companion | LD2450 타겟 수 | RFID 동시성 | 확률 표현만 |
+| Friction | 대기구역 CSI | RFID 회전율 | CSI의 주 무대 |
+| Phantom | mmWave presence | - | RFID 누락 검출 |
+| Ghost-read | mmWave presence 부재 | RSSI | RFID 오독 검출 |
 
 ---
 
-## 6. 향후 검증 과제
+## 6. PoC 검증 액션 (v1 구조 유지, 항목 갱신)
 
-- 🔴 5종 Joint Signal 임계값 정확도 (PoC 4주 측정)
-- 🔴 Session Reconstruction 정밀도·재현율 (PoC Week 2)
+- Week 1: 데이터 수집 안정화 + **실측 오독률 측정** (신규)
+- Week 2: Session Reconstruction 검증 (정밀도·재현율 90%+, **EPC 커버리지 측정** 신규)
+- Week 3: Joint Signal 6종 측정
+- Week 4: 비즈니스 임팩트 검증 (high try-on/low conversion SKU 5개+, MD 액션 1개+ — v1 유지)
+
+## 7. 향후 검증 과제 (갱신)
+
+- 🔴 3단 매칭 각 단계 커버리지·정확도 (PoC Week 2)
+- 🔴 hold_time·시간창·still_ratio 임계값 (Stage 0 + PoC)
+- 🔴 인접 피팅룸 오독률 및 Ghost 필터 정확도 (PoC Week 1~2)
+- 🔴 본사 POS EPC 로그 실재 여부 (인터뷰)
 - 🔴 매장별 calibration 필요성 (다매장 PoC 시)
-- 🔴 시즌별 매출 패턴과의 상관관계 (Pilot 12주)
-- 🔴 ML 모델 vs 룰 기반 알고리즘 비교 (Phase 3)
-
-**본 문서 활용 가이드**: 알고리즘 골격 + 임계값 가설 + 검증 방법은 Phase 1 시뮬레이션 데이터 개발 시 즉시 활용. 실측 후 v2로 정밀화.
+- 🔴 Joint Signal ↔ 전환율 상관 (PoC 4주 — 사업 가설 본질)
