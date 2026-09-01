@@ -1,14 +1,14 @@
 # TryOps - 오프라인 매장 고객 행동 분석 플랫폼
 
-TryOps는 mmWave 레이더와 Wi-Fi CSI(Channel State Information) 센서, RFID 안테나 신호를 융합하여 오프라인 매장에서 고객의 제품 피팅 및 관심 행동을 측정·분석하는 플랫폼입니다.
+TryOps는 mmWave 레이더와 Wi-Fi CSI(Channel State Information) 센서, RFID 안테나 신호를 융합해 오프라인 매장에서 고객의 제품 피팅 및 관심 행동을 측정·분석하는 플랫폼입니다.
 
-피팅룸 내부는 mmWave(재실·정지 감지), 대기구역·광역은 ESP32-C6 기반 Wi-Fi 센싱(Espressif 공식 esp_wifi_sensing, Apache-2.0), 사물 식별은 RFID EPC가 담당하며, 세 신호를 시간축에서 융합해 "고객이 입어봤지만 사지 않은 이유"를 추정합니다. 센서 아키텍처 결정 근거는 `docs/ADR-001-sensor-architecture.md`, v2 전환 지침은 `docs/REDESIGN_MASTER_PLAN.md`를 참고하십시오.
+피팅룸 내부는 mmWave(재실·정지 감지), 대기구역·광역은 ESP32-C6 기반 Wi-Fi 센싱(Espressif 공식 esp_wifi_sensing, Apache-2.0), 사물 식별은 RFID EPC가 담당하며 세 신호를 시간축에서 융합해 "고객이 입어봤지만 사지 않은 이유"를 추정합니다. 센서 아키텍처 결정 근거는 `docs/ADR-001-sensor-architecture.md`, v2 전환 지침은 `docs/REDESIGN_MASTER_PLAN.md`를 참고하십시오.
 
 본 리포지토리는 기획 설계 문서, 인프라 구축을 위한 IaC(Terraform), 그리고 각 디바이스 펌웨어 및 클라우드 애플리케이션을 포함하는 모노레포(Monorepo) 구조입니다.
 
 ---
 
-## 📂 프로젝트 구조
+## 프로젝트 구조
 
 ```
 tryops/                              ← 프로젝트 루트
@@ -53,7 +53,7 @@ tryops/                              ← 프로젝트 루트
 
 ---
 
-## 🧭 기술 스택 요약 (v2)
+## 기술 스택 요약 (v2)
 
 | 레이어 | 기술 | 라이선스 |
 |---|---|---|
@@ -63,13 +63,13 @@ tryops/                              ← 프로젝트 루트
 | 융합·신호 알고리즘 | 자체 구현 (Joint Signal 6종) | 자체 IP |
 | 클라우드 | GCP (Cloud Run, BigQuery 등, Terraform IaC) | - |
 
-프라이버시 바이 디자인: raw CSI는 게이트웨이 밖으로 전송·보존하지 않으며, 1분 집계 신호만 적재합니다. 개인 식별 정보는 수집하지 않습니다.
+프라이버시 바이 디자인: raw CSI는 게이트웨이 밖으로 전송·보존하지 않으며 1분 집계 신호만 적재합니다. 개인 식별 정보는 수집하지 않습니다.
 
 ---
 
-## 🛠️ 개발 가이드 및 도구 정보
+## 개발 가이드 및 도구 정보
 
 상세 개발 환경 구축 및 로컬 실행 방법은 프로젝트 루트의 `CLAUDE.md` 가이드를 참고해 주시기 바랍니다.
 
-- **클라우드 인프라 배포**: `infra/terraform` 내의 환경 설정을 통해 GCP로 자동 빌드 및 배포할 수 있습니다.
-- **개념 검증 (Stage 0)**: `apps/stage0_validation` 코드를 사용하여 H&M Kaggle 데이터셋 및 가상 EPC-센서 매칭 정확도를 시뮬레이션할 수 있습니다. Stage 0 하드웨어(약 6~10만원)와 4주 일정은 `docs/planning/concept_validation_spec.md` 참조.
+- **클라우드 인프라 배포**: `infra/terraform` 내의 환경 설정으로 GCP에 자동 빌드·배포할 수 있습니다.
+- **개념 검증 (Stage 0)**: `apps/stage0_validation` 코드를 사용해 H&M Kaggle 데이터셋과 가상 EPC-센서 매칭 정확도를 시뮬레이션할 수 있습니다. Stage 0 하드웨어(약 6~10만원)와 4주 일정은 `docs/planning/concept_validation_spec.md` 참조.
